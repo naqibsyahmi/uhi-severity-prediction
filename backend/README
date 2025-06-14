@@ -1,0 +1,9 @@
+TO TEST THE API REQUEST USE AS BELOW 
+
+{
+  "latitude": 40.81310667,
+  "longitude": -73.90916667,
+  "date_interval": "2021-06-01/2021-09-01"
+}
+
+
