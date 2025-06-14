@@ -16,3 +16,5 @@ rioxarray
 dask
 
 joblib
+
+tqdm
