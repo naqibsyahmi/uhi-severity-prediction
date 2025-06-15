@@ -12,7 +12,7 @@ from odc.stac import stac_load
 import xarray as xr
 import numpy as np
 from tqdm import tqdm
-from geopy.distance import geodesic
+import joblib
 import os
 
 app = FastAPI()
@@ -26,16 +26,42 @@ class Features(BaseModel):
     longitude: float
     date_interval: str  # Format: "YYYY-MM-DD/YYYY-MM-DD"
 
-@app.post("/get_weather_satellite_full/")
-def get_weather_satellite_full(features: Features):
+model_path = os.path.join(os.path.dirname(__file__), 'model', 'u')
+model = joblib.load(model_path)
+
+class UHIInput(BaseModel):
+    Avg_Wind_Speed: float
+    Wind_Direction: float
+    Solar_Flux: float
+
+    B01: float
+    B02: float
+    B03: float
+    B04: float
+    B05: float
+    B06: float
+    B07: float
+    B08: float
+    B8A: float
+    B11: float
+    B12: float
+
+    NDVI_Sentinel: float
+    NDBI_Sentinel: float
+    NDVI_Landsat: float
+    NDBI_Landsat: float
+
+    red: float
+    green: float
+    nir08: float
+    swir16: float
+    swir22: float
+    lwir11: float
+
+@app.post("/get_weather_satellite_features/")
+def get_weather_satellite_features(features: Features):
     start_date, end_date = features.date_interval.split("/")
 
-    file_path = os.path.join("..", "data", "Training_data_uhi_index_UHI2025-v2.csv")
-
-    ground_uhi_df = pd.read_csv(file_path)
-    ground_uhi_df['datetime'] = pd.to_datetime(ground_uhi_df['datetime'], dayfirst=True)
-
-    # Weather data retrieval
     url = "https://archive-api.open-meteo.com/v1/archive"
     params = {
         "latitude": features.latitude,
@@ -48,7 +74,7 @@ def get_weather_satellite_full(features: Features):
     response = responses[0]
     hourly = response.Hourly()
 
-    hourly_data = pd.DataFrame({
+    weather_df = pd.DataFrame({
         "datetime": pd.date_range(
             start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
             end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
@@ -59,44 +85,8 @@ def get_weather_satellite_full(features: Features):
         "longitude": features.longitude,
         "wind_speed_10m": hourly.Variables(0).ValuesAsNumpy(),
         "wind_direction_10m": hourly.Variables(1).ValuesAsNumpy(),
-        "shortwave_radiation_instant": hourly.Variables(2).ValuesAsNumpy()
+        "solar_flux": hourly.Variables(2).ValuesAsNumpy()
     })
-
-    def map_ground_data(ground_uhi_df, ground_combined_df, tolerance_minutes=60, max_distance_meters=7000):
-        ground_combined_df = ground_combined_df.copy()
-        matched_rows = []
-
-        for _, uhi_row in tqdm(ground_uhi_df.iterrows(), total=len(ground_uhi_df), desc="Mapping ground data"):
-
-            uhi_time = uhi_row['datetime']
-
-            # Make both datetime timezone-naive
-            ground_combined_df['datetime'] = ground_combined_df['datetime'].dt.tz_localize(None)
-            uhi_time = uhi_time
-            
-            uhi_lat = uhi_row['Latitude']
-            uhi_lon = uhi_row['Longitude']
-
-            ground_combined_df['time_difference'] = (ground_combined_df['datetime'] - uhi_time).abs()
-            window = pd.Timedelta(minutes=tolerance_minutes)
-            time_candidates = ground_combined_df[ground_combined_df['time_difference'] <= window]
-
-            if not time_candidates.empty:
-                time_candidates = time_candidates.copy()
-                time_candidates['distance'] = time_candidates.apply(lambda row: geodesic((uhi_lat, uhi_lon), (row['latitude'], row['longitude'])).meters, axis=1)
-                spatial_candidates = time_candidates[time_candidates['distance'] <= max_distance_meters]
-                if not spatial_candidates.empty:
-                    best_match = spatial_candidates.loc[spatial_candidates['time_difference'].idxmin()]
-                    matched_rows.append(best_match.drop(labels=['distance', 'time_difference']))
-                    continue
-
-            matched_rows.append(pd.Series([np.nan] * len(ground_combined_df.columns), index=ground_combined_df.columns))
-
-        matched_df = pd.DataFrame(matched_rows).reset_index(drop=True)
-        combined = pd.concat([ground_uhi_df.reset_index(drop=True), matched_df], axis=1)
-        return combined
-
-    mapped_ground_df = map_ground_data(ground_uhi_df, hourly_data)
 
     lower_left = (features.latitude - 0.03, features.longitude - 0.07)
     upper_right = (features.latitude + 0.03, features.longitude + 0.07)
@@ -105,16 +95,14 @@ def get_weather_satellite_full(features: Features):
 
     stac = pystac_client.Client.open("https://planetarycomputer.microsoft.com/api/stac/v1")
 
-    # Sentinel-2
     search_sentinel = stac.search(bbox=bounds, datetime=time_window, collections=["sentinel-2-l2a"], query={"eo:cloud_cover": {"lt": 20}})
     signed_items_sentinel = [planetary_computer.sign(item) for item in search_sentinel.get_items()]
 
-    # Landsat-8
     search_landsat = stac.search(bbox=bounds, datetime=time_window, collections=["landsat-c2-l2"], query={"eo:cloud_cover": {"lt": 20}, "platform": {"in": ["landsat-8"]}})
     signed_items_landsat = [planetary_computer.sign(item) for item in search_landsat.get_items()]
 
-    resolution = 10  # meters per pixel
-    scale = resolution / 111320.0  # degrees per pixel
+    resolution = 10
+    scale = resolution / 111320.0
 
     data_sentinel = stac_load(
         signed_items_sentinel,
@@ -125,18 +113,18 @@ def get_weather_satellite_full(features: Features):
         dtype="uint16",
         patch_url=planetary_computer.sign,
         bbox=bounds
-    )
+    ).compute()
 
     data1_landsat = stac_load(
         signed_items_landsat,
-        bands=["red", "green", "blue", "nir08", "swir16", "swir22"],
+        bands=["red", "green", "nir08", "swir16", "swir22"],
         crs="EPSG:4326",
         resolution=scale,
         chunks={"x": 2048, "y": 2048},
         dtype="uint16",
         patch_url=planetary_computer.sign,
         bbox=bounds
-    )
+    ).compute()
 
     data2_landsat = stac_load(
         signed_items_landsat,
@@ -147,71 +135,71 @@ def get_weather_satellite_full(features: Features):
         dtype="uint16",
         patch_url=planetary_computer.sign,
         bbox=bounds
-    )
+    ).compute()
 
     scale1, offset1 = 0.0000275, -0.2
     scale2, offset2 = 0.00341802, 149.0
     kelvin_celsius = 273.15
+
     data1_landsat = data1_landsat.astype(float) * scale1 + offset1
     data2_landsat = data2_landsat.astype(float) * scale2 + offset2 - kelvin_celsius
 
-    median_sentinel = data_sentinel.median(dim="time").compute()
-    median_landsat1 = data1_landsat.median(dim="time").compute()
-    median_landsat2 = data2_landsat.median(dim="time").compute()
+    median_sentinel = data_sentinel.median(dim="time")
+    median_landsat1 = data1_landsat.median(dim="time")
+    median_landsat2 = data2_landsat.median(dim="time")
     median_landsat = xr.merge([median_landsat1, median_landsat2])
 
-    def map_satellite_data(median, uhi_df):
-        latitudes = uhi_df['Latitude'].values
-        longitudes = uhi_df['Longitude'].values
-        band_names = list(median.data_vars)
-        band_values = {band: [] for band in band_names}
+    NDVI_Sentinel = (median_sentinel["B08"] - median_sentinel["B04"]) / (median_sentinel["B08"] + median_sentinel["B04"])
+    NDBI_Sentinel = (median_sentinel["B11"] - median_sentinel["B08"]) / (median_sentinel["B11"] + median_sentinel["B08"])
+    NDVI_Landsat = (median_landsat["nir08"] - median_landsat["red"]) / (median_landsat["nir08"] + median_landsat["red"])
+    NDBI_Landsat = (median_landsat["swir16"] - median_landsat["nir08"]) / (median_landsat["swir16"] + median_landsat["nir08"])
 
-        for lat, lon in tqdm(zip(latitudes, longitudes), total=len(latitudes), desc="Mapping satellite data"):
-            for band in band_names:
-                value = median[band].sel(latitude=lat, longitude=lon, method='nearest').values.item()
-                band_values[band].append(value)
-        return pd.DataFrame(band_values)
+    response_json = {
+        # "coordinates": {
+        #     "latitude": features.latitude,
+        #     "longitude": features.longitude,
+        # },
+        # "satellite_features": {
+        #     "NDVI_Sentinel": float(np.nanmean(NDVI_Sentinel.values)),
+        #     "NDBI_Sentinel": float(np.nanmean(NDBI_Sentinel.values)),
+        #     "NDVI_Landsat": float(np.nanmean(NDVI_Landsat.values)),
+        #     "NDBI_Landsat": float(np.nanmean(NDBI_Landsat.values)),
+        #     **{band: float(np.nanmean(median_sentinel[band].values)) for band in median_sentinel.data_vars},
+        #     **{band: float(np.nanmean(median_landsat[band].values)) for band in median_landsat.data_vars},
+        # },
+        # "ground_features": {
+        #     "avg_wind_speed": float(weather_df["wind_speed_10m"].mean()),
+        #     "avg_wind_direction": float(weather_df["wind_direction_10m"].mean()),
+        #     "avg_solar_flux": float(weather_df["solar_flux"].mean()),
+        # }
+        
+        "avg_wind_speed": float(weather_df["wind_speed_10m"].mean()),
+        "avg_wind_direction": float(weather_df["wind_direction_10m"].mean()),
+        "avg_solar_flux": float(weather_df["solar_flux"].mean()),
+        **{band: float(np.nanmean(median_sentinel[band].values)) for band in median_sentinel.data_vars},
+        "NDVI_Sentinel": float(np.nanmean(NDVI_Sentinel.values)),
+        "NDBI_Sentinel": float(np.nanmean(NDBI_Sentinel.values)),
+        "NDVI_Landsat": float(np.nanmean(NDVI_Landsat.values)),
+        "NDBI_Landsat": float(np.nanmean(NDBI_Landsat.values)),
+        **{band: float(np.nanmean(median_landsat[band].values)) for band in median_landsat.data_vars},
+    }
 
-    sentinel_features = map_satellite_data(median_sentinel, ground_uhi_df)
-    landsat_features = map_satellite_data(median_landsat, ground_uhi_df)
+    return JSONResponse(content=jsonable_encoder(response_json))
 
-    mapped_satellite_combined_df = pd.concat([ground_uhi_df.reset_index(drop=True), sentinel_features, landsat_features], axis=1)
-    band_columns = [col for col in mapped_satellite_combined_df.columns if col.startswith('B') or col in ['red', 'green', 'blue', 'nir08', 'swir16', 'swir22', 'lwir11']]
-    mapped_satellite_combined_df = mapped_satellite_combined_df.drop_duplicates(subset=band_columns).reset_index(drop=True)
+@app.post("/predict_uhi_index/")
+def predict_uhi_index(input: UHIInput):
+    input_array = np.array([
+        input.Avg_Wind_Speed,
+        input.Wind_Direction,
+        input.Solar_Flux,
+        input.B01, input.B02, input.B03, input.B04, input.B05,
+        input.B06, input.B07, input.B08, input.B8A,
+        input.B11, input.B12,
+        input.NDVI_Sentinel, input.NDBI_Sentinel,
+        input.NDVI_Landsat, input.NDBI_Landsat,
+        input.red, input.green, input.nir08,
+        input.swir16, input.swir22, input.lwir11
+    ]).reshape(1, -1)
 
-    mapped_ground_df = mapped_ground_df.loc[:, ~mapped_ground_df.columns.duplicated()]
-    mapped_satellite_combined_df = mapped_satellite_combined_df.loc[:, ~mapped_satellite_combined_df.columns.duplicated()]
-    final_combined_df = pd.merge(mapped_ground_df, mapped_satellite_combined_df, how='inner', on=['Longitude', 'Latitude', 'datetime', 'UHI Index'])
-
-    final_combined_df.rename(columns={
-        'wind_speed_10m': 'Avg Wind Speed [m/s]',
-        'wind_direction_10m': 'Wind Direction [degrees]',
-        'shortwave_radiation_instant': 'Solar Flux [W/m^2]'
-    }, inplace=True)
-
-    # Calculate NDVI Combined (Normalized Difference Vegetation Index) and handle division by zero by replacing infinities with NaN. (Sentinel)
-    final_combined_df['NDVI_Sentinel'] = (final_combined_df['B08'] - final_combined_df['B04']) / (final_combined_df['B08'] + final_combined_df['B04'])
-    final_combined_df['NDVI_Sentinel'] = final_combined_df['NDVI_Sentinel'].replace([np.inf, -np.inf], np.nan)
-
-    # Calculate NDVI Combined (Normalized Difference Vegetation Index) and handle division by zero by replacing infinities with NaN. (Landsat)
-    final_combined_df['NDVI_Landsat'] = (final_combined_df['nir08'] - final_combined_df['red']) / (final_combined_df['nir08'] + final_combined_df['red'])
-    final_combined_df['NDVI_Landsat'] = final_combined_df['NDVI_Landsat'].replace([np.inf, -np.inf], np.nan)
-
-    # Calculate NDBI (Normalized Difference Built-up Index) and handle division vy zero by replacing infinities with NaN. (Sentinel)
-    final_combined_df['NDBI_Sentinel'] = (final_combined_df['B11'] - final_combined_df['B08']) / (final_combined_df['B11'] + final_combined_df['B08'])
-    final_combined_df['NDBI_Sentinel'] = final_combined_df['NDBI_Sentinel'].replace([np.inf, -np.inf], np.nan)
-
-    # Calculate NDBI (Normalized Difference Built-up Index) and handle division vy zero by replacing infinities with NaN. (Landsat)
-    final_combined_df['NDBI_Landsat'] = (final_combined_df['swir16'] - final_combined_df['nir08']) / (final_combined_df['swir16'] + final_combined_df['nir08'])
-    final_combined_df['NDBI_Landsat'] = final_combined_df['NDBI_Landsat'].replace([np.inf, -np.inf], np.nan)
-
-    print(final_combined_df.head())
-
-    final_combined_df = final_combined_df[['Avg Wind Speed [m/s]', 'Wind Direction [degrees]', 'Solar Flux [W/m^2]',
-                                'B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12',
-                                'NDVI_Sentinel', 'NDBI_Sentinel', 'NDVI_Landsat', 'NDBI_Landsat', 'red', 'green',
-                                'nir08', 'swir16', 'swir22', 'lwir11', 'UHI Index']]
-    
-    final_combined_json = final_combined_df.to_json(orient="records", date_format="iso")
-
-    return JSONResponse(content=jsonable_encoder({"final_combined_data": final_combined_json}))
+    prediction = model.predict(input_array)
+    return {"uhi_index": float(prediction[0])}
