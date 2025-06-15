@@ -30,7 +30,7 @@ class Features(BaseModel):
 def get_weather_satellite_full(features: Features):
     start_date, end_date = features.date_interval.split("/")
 
-    file_path = os.path.join("data", "Training_data_uhi_index_UHI2025-v2.csv")
+    file_path = os.path.join("..", "data", "Training_data_uhi_index_UHI2025-v2.csv")
 
     ground_uhi_df = pd.read_csv(file_path)
     ground_uhi_df['datetime'] = pd.to_datetime(ground_uhi_df['datetime'], dayfirst=True)
@@ -183,6 +183,35 @@ def get_weather_satellite_full(features: Features):
     mapped_satellite_combined_df = mapped_satellite_combined_df.loc[:, ~mapped_satellite_combined_df.columns.duplicated()]
     final_combined_df = pd.merge(mapped_ground_df, mapped_satellite_combined_df, how='inner', on=['Longitude', 'Latitude', 'datetime', 'UHI Index'])
 
+    final_combined_df.rename(columns={
+        'wind_speed_10m': 'Avg Wind Speed [m/s]',
+        'wind_direction_10m': 'Wind Direction [degrees]',
+        'shortwave_radiation_instant': 'Solar Flux [W/m^2]'
+    }, inplace=True)
+
+    # Calculate NDVI Combined (Normalized Difference Vegetation Index) and handle division by zero by replacing infinities with NaN. (Sentinel)
+    final_combined_df['NDVI_Sentinel'] = (final_combined_df['B08'] - final_combined_df['B04']) / (final_combined_df['B08'] + final_combined_df['B04'])
+    final_combined_df['NDVI_Sentinel'] = final_combined_df['NDVI_Sentinel'].replace([np.inf, -np.inf], np.nan)
+
+    # Calculate NDVI Combined (Normalized Difference Vegetation Index) and handle division by zero by replacing infinities with NaN. (Landsat)
+    final_combined_df['NDVI_Landsat'] = (final_combined_df['nir08'] - final_combined_df['red']) / (final_combined_df['nir08'] + final_combined_df['red'])
+    final_combined_df['NDVI_Landsat'] = final_combined_df['NDVI_Landsat'].replace([np.inf, -np.inf], np.nan)
+
+    # Calculate NDBI (Normalized Difference Built-up Index) and handle division vy zero by replacing infinities with NaN. (Sentinel)
+    final_combined_df['NDBI_Sentinel'] = (final_combined_df['B11'] - final_combined_df['B08']) / (final_combined_df['B11'] + final_combined_df['B08'])
+    final_combined_df['NDBI_Sentinel'] = final_combined_df['NDBI_Sentinel'].replace([np.inf, -np.inf], np.nan)
+
+    # Calculate NDBI (Normalized Difference Built-up Index) and handle division vy zero by replacing infinities with NaN. (Landsat)
+    final_combined_df['NDBI_Landsat'] = (final_combined_df['swir16'] - final_combined_df['nir08']) / (final_combined_df['swir16'] + final_combined_df['nir08'])
+    final_combined_df['NDBI_Landsat'] = final_combined_df['NDBI_Landsat'].replace([np.inf, -np.inf], np.nan)
+
+    print(final_combined_df.head())
+
+    final_combined_df = final_combined_df[['Avg Wind Speed [m/s]', 'Wind Direction [degrees]', 'Solar Flux [W/m^2]',
+                                'B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12',
+                                'NDVI_Sentinel', 'NDBI_Sentinel', 'NDVI_Landsat', 'NDBI_Landsat', 'red', 'green',
+                                'nir08', 'swir16', 'swir22', 'lwir11', 'UHI Index']]
+    
     final_combined_json = final_combined_df.to_json(orient="records", date_format="iso")
 
     return JSONResponse(content=jsonable_encoder({"final_combined_data": final_combined_json}))
