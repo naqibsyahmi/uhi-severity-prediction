@@ -1,3 +1,7 @@
+cd ./backend/
+uvicorn.exe main:app --reload
+
+
 TO TEST THE API REQUEST USE AS BELOW 
 
 {
