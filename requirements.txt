@@ -21,4 +21,5 @@ statsmodels
 nbformat
 xgboost
 shap
-nbconvert
+geopy
+pydeck
