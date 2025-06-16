@@ -23,4 +23,3 @@ xgboost
 shap
 geopy
 pydeck
-# pip install -r requirements.txt
