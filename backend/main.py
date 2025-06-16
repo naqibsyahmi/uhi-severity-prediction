@@ -25,7 +25,9 @@ class Features(BaseModel):
     longitude: float
     date_interval: str  # Format: "YYYY-MM-DD/YYYY-MM-DD"
 
-model_path = os.path.join(os.path.dirname(__file__), 'model', 'u')
+model_path = os.path.join(os.path.dirname(__file__), '..', 'model', 'uhi_prediction.pkl')
+model_path = os.path.abspath(model_path)
+
 model = joblib.load(model_path)
 
 class UHIInput(BaseModel):
