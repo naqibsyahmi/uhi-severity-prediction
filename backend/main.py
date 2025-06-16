@@ -62,7 +62,7 @@ def get_features_data(features: Features):
     try:
         start_date, end_date = features.date_interval.split("/")
 
-        url = "https://archive-api.open-meteo.com/v1/archive"
+        url = "https://historical-forecast-api.open-meteo.com/v1/forecast"
         params = {
             "latitude": features.latitude,
             "longitude": features.longitude,
@@ -72,20 +72,24 @@ def get_features_data(features: Features):
         }
         responses = openmeteo.weather_api(url, params=params)
         response = responses[0]
+
         hourly = response.Hourly()
+        hourly_wind_speed_10m = hourly.Variables(0).ValuesAsNumpy()
+        hourly_wind_direction_10m = hourly.Variables(1).ValuesAsNumpy()
+        hourly_shortwave_radiation_instant = hourly.Variables(2).ValuesAsNumpy()
 
         weather_df = pd.DataFrame({
-            "datetime": pd.date_range(
-                start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
-                end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
-                freq=pd.Timedelta(seconds=hourly.Interval()),
-                inclusive="left"
+            "date": pd.date_range(
+                start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
+                end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
+                freq = pd.Timedelta(seconds = hourly.Interval()),
+                inclusive = "left"
             ),
             "latitude": features.latitude,
             "longitude": features.longitude,
-            "wind_speed_10m": hourly.Variables(0).ValuesAsNumpy(),
-            "wind_direction_10m": hourly.Variables(1).ValuesAsNumpy(),
-            "solar_flux": hourly.Variables(2).ValuesAsNumpy()
+            "wind_speed_10m": hourly_wind_speed_10m,
+            "wind_direction_10m": hourly_wind_direction_10m,
+            "solar_flux": hourly_shortwave_radiation_instant
         })
 
         lower_left = (features.latitude - 0.03, features.longitude - 0.07)
