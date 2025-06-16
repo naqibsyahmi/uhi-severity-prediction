@@ -1,4 +1,7 @@
 cd ./backend/
+
+pip install -r /path/to/requirements.txt
+
 uvicorn.exe main:app --reload
 
 json request to get features data 
