@@ -1,14 +1,14 @@
 #.\venv\Scripts\Activate.ps1
 
 import datetime
+import requests
 import streamlit as st
 import joblib
 import numpy as np
 from geopy.geocoders import Nominatim
 import pydeck as pdk
 
-
-model, feature_names = joblib.load("model_with_features.pkl")
+BACKEND_URL = "http://127.0.0.1:8000"
 
 st.markdown(
     "<h1 style='text-align: center;'>📍🌡️ UHI Prediction Based on Coordinates</h1>",
@@ -61,8 +61,40 @@ def extract_features_from_coordinates(lat, lon):
     return np.array([lat * 0.1 + lon * 0.01 + i * 0.001 for i in range(24)])
 
 if st.button("🚀 Predict"):
-    # Predict
-    features = extract_features_from_coordinates(lat, lon)
-    prediction = model.predict([features])[0]
-    st.metric("🌡️ Predicted UHI Index", f"{prediction:.4f}")
+    with st.spinner("Retrieving features and predicting..."):
 
+        start_date, end_date = date_range
+        get_features_payload = {
+            "latitude": lat,
+            "longitude": lon,
+            "date_interval": f"{start_date}/{end_date}"
+        }
+
+        try:
+            response = requests.post(f"{BACKEND_URL}/get_features_data/", json=get_features_payload)
+
+            if response.status_code == 200:
+                features_json = response.json()
+
+                predict_response = requests.post(f"{BACKEND_URL}/predict_uhi_index/", json=features_json)
+
+                if predict_response.status_code != 200:
+                    st.error(f"Error predicting UHI Index: {predict_response.status_code}")
+                else:
+                    uhi_result = predict_response.json()
+                    st.success("✅ Prediction completed!")
+                    st.metric("🌡️ Predicted UHI Index", f"{uhi_result['uhi_index']:.4f}")
+
+            elif response.status_code == 404:
+                st.error(f"❗ Endpoint not found {response.status_code}. Check your BACKEND_URL.")
+            elif response.status_code == 422:
+                st.error(f"❗ Validation error {response.status_code}. Check your request payload.")
+            elif response.status_code >= 500:
+                error_detail = response.json().get("detail", "No detail provided.")
+                st.error(f"❗ Server error {response.status_code} : {error_detail}")
+            else:
+                st.error(f"❗ Unexpected Error {response.status_code}: {response.text}")
+
+        except requests.exceptions.RequestException as e:
+            st.error("❗ Network error occurred while connecting to the backend.")
+            st.exception(e)
