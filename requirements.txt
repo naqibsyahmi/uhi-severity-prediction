@@ -21,3 +21,4 @@ statsmodels
 nbformat
 xgboost
 shap
+nbconvert
