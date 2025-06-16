@@ -41,7 +41,7 @@
     https://github.com/naqibsyahmi/uhi-severity-prediction.git
     ```
 
-2. Create a virtual environment named **'venv'** in your project folder by running the following command:
+2. Create a virtual environment named **`venv`** in your project folder by running the following command:
     ```
     python -m venv venv
     ```
@@ -72,7 +72,7 @@
 
 ### Running the System
 
-1. Navigate to the **'src'** folder by running the following command in your terminal:
+1. Navigate to the **`src`** folder by running the following command in your terminal:
 
     ```
     cd src
