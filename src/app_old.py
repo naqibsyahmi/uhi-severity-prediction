@@ -20,20 +20,17 @@ st.markdown(
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    place = st.text_input("📍 Enter a town/city name", value="Bronx, New York")
-
+    lat = st.number_input("📌 Latitude", value=40.812777, format="%.6f")
+    lon = st.number_input("📌 Longitude", value=-73.909280, format="%.6f")
 
     # Show location name
     geolocator = Nominatim(user_agent="uhi-app")
-    location = geolocator.geocode(place)
-
+    location = geolocator.reverse((lat, lon), language='en')
     if location:
-        lat = location.latitude
-        lon = location.longitude
-        st.success(f"📌 Location found: **{location.address}**")
+        st.write(f"📍 Location Name:")
+        st.write(f"**{location.address}**")
     else:
-        lat = lon = None
-        st.warning("⚠️ Location not found. Please try another name.")
+        st.warning("Location name not found.")
 
     # Date range input
     date_range = st.date_input(
@@ -42,29 +39,28 @@ with col1:
     )
 
 with col2:
-    if lat and lon:
-        satellite_map = pdk.Deck(
-            map_style="mapbox://styles/mapbox/satellite-streets-v11",  # <— Satellite style
-            initial_view_state=pdk.ViewState(
-                latitude=lat,
-                longitude=lon,
-                zoom=14,
-                pitch=45,
-            ),
-            layers=[
-                pdk.Layer(
-                    "ScatterplotLayer",
-                    data=[{"position": [lon, lat]}],
-                    get_position="position",
-                    get_color=[255, 0, 0],
-                    get_radius=100,
-                )
-            ],
-        )
-        st.pydeck_chart(satellite_map)
+    satellite_map = pdk.Deck(
+        map_style="mapbox://styles/mapbox/satellite-streets-v11",  # <— Satellite style
+        initial_view_state=pdk.ViewState(
+            latitude=lat,
+            longitude=lon,
+            zoom=14,
+            pitch=45,
+        ),
+        layers=[
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=[{"position": [lon, lat]}],
+                get_position="position",
+                get_color=[255, 0, 0],
+                get_radius=100,
+            )
+        ],
+    )
+    st.pydeck_chart(satellite_map)
 
 
-if st.button("🚀 Predict") and lat and lon:
+if st.button("🚀 Predict"):
     with st.spinner("Retrieving features and predicting..."):
 
         start_date, end_date = date_range
