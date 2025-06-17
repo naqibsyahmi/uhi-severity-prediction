@@ -87,7 +87,7 @@
 3. Run the following command to run the backend server:
 
     ```
-    uvicorn api:app --reload
+    uvicorn api:app --reload ../backend
     ```
 
 4. Run the following command to run the frontend server:

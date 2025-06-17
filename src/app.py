@@ -1,17 +1,19 @@
 #.\venv\Scripts\Activate.ps1
-
+from geopy.geocoders import Nominatim
+from dotenv import load_dotenv
 import datetime
 import requests
+import os
 import streamlit as st
-import joblib
-import numpy as np
-from geopy.geocoders import Nominatim
 import pydeck as pdk
 
-BACKEND_URL = "http://127.0.0.1:8000"
+load_dotenv()
+
+# Backend
+BACKEND_URL = os.environ.get("BACKEND_URL")
 
 st.markdown(
-    "<h1 style='text-align: center;'>📍🌡️ UHI Prediction Based on Coordinates</h1>",
+    "<h1 style='text-align: center;'>🏙️🔥 Urban Heat Island (UHI) Prediction</h1>",
     unsafe_allow_html=True
 )
 
@@ -20,6 +22,7 @@ col1, col2 = st.columns([1, 1])
 with col1:
     lat = st.number_input("📌 Latitude", value=40.812777, format="%.6f")
     lon = st.number_input("📌 Longitude", value=-73.909280, format="%.6f")
+
     # Show location name
     geolocator = Nominatim(user_agent="uhi-app")
     location = geolocator.reverse((lat, lon), language='en')
@@ -28,6 +31,7 @@ with col1:
         st.write(f"**{location.address}**")
     else:
         st.warning("Location name not found.")
+
     # Date range input
     date_range = st.date_input(
         "📅 Select Date Range",
@@ -53,12 +57,8 @@ with col2:
             )
         ],
     )
-
     st.pydeck_chart(satellite_map)
 
-
-def extract_features_from_coordinates(lat, lon):
-    return np.array([lat * 0.1 + lon * 0.01 + i * 0.001 for i in range(24)])
 
 if st.button("🚀 Predict"):
     with st.spinner("Retrieving features and predicting..."):
@@ -83,7 +83,40 @@ if st.button("🚀 Predict"):
                 else:
                     uhi_result = predict_response.json()
                     st.success("✅ Prediction completed!")
-                    st.metric("🌡️ Predicted UHI Index", f"{uhi_result['uhi_index']:.4f}")
+                    # st.metric("🌡️ Predicted UHI Index", f"{uhi_result['uhi_index']:.4f}")
+
+                    # Calculate UHI severity based on predicted UHI index
+                    uhi_index = uhi_result['uhi_index']
+                    if uhi_index < 0.50:
+                        severity = "🟢 Low"
+                        bg_color = "rgba(31, 122, 31, 0.6)"
+
+                    elif 0.50 <= uhi_index < 1.00:
+                        severity = "🟡 Moderate"
+                        bg_color = "rgba(230, 194, 0, 0.6)"
+
+                    elif 1.00 <= uhi_index < 1.50:
+                        severity = "🟠 High"
+                        bg_color = "rgba(255, 149, 0, 0.6)"
+
+                    else:
+                        severity = "🔴 Very High"
+                        bg_color = "rgba(204, 0, 0, 0.6)"
+
+                    # Display UHI index and severity
+                    col_pred, col_sev = st.columns([1, 2])
+                    with col_pred:
+                        st.metric("🌡️ Predicted UHI Index", f"{uhi_result['uhi_index']:.4f}")
+
+                    with col_sev:
+                        st.markdown(
+                            f"""
+                            <div style='padding: 0.8rem 1rem; background-color: {bg_color}; border-radius: 0.5rem; color: white; font-weight: bold;'>
+                                UHI Severity Level: {severity}
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
             elif response.status_code == 404:
                 st.error(f"❗ Endpoint not found {response.status_code}. Check your BACKEND_URL.")
