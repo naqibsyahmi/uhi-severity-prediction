@@ -1,4 +1,3 @@
-#.\venv\Scripts\Activate.ps1
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 import datetime
@@ -10,7 +9,8 @@ import pydeck as pdk
 load_dotenv()
 
 # Backend
-BACKEND_URL = os.environ.get("BACKEND_URL")
+INFERENCE_API_GET_FEATURES = os.environ.get("INFERENCE_API_GET_FEATURES")
+INFERENCE_API_PREDICTION = os.environ.get("INFERENCE_API_PREDICTION")
 
 st.markdown(
     "<h1 style='text-align: center;'>🏙️🔥 Urban Heat Island (UHI) Prediction</h1>",
@@ -71,12 +71,12 @@ if st.button("🚀 Predict"):
         }
 
         try:
-            response = requests.post(f"{BACKEND_URL}/get_features_data/", json=get_features_payload)
+            response = requests.post(INFERENCE_API_GET_FEATURES, json=get_features_payload)
 
             if response.status_code == 200:
                 features_json = response.json()
 
-                predict_response = requests.post(f"{BACKEND_URL}/predict_uhi_index/", json=features_json)
+                predict_response = requests.post(INFERENCE_API_PREDICTION, json=features_json)
 
                 if predict_response.status_code != 200:
                     st.error(f"Error predicting UHI Index: {predict_response.status_code}")
