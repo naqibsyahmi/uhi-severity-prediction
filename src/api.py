@@ -25,7 +25,7 @@ class Features(BaseModel):
     longitude: float
     date_interval: str  # Format: "YYYY-MM-DD/YYYY-MM-DD"
 
-model_path = os.path.join(os.path.dirname(__file__), '..', 'model', 'uhi_prediction.pkl')
+model_path = os.path.join(os.path.dirname(__file__), 'u')
 model_path = os.path.abspath(model_path)
 
 model = joblib.load(model_path)
@@ -76,6 +76,10 @@ def get_features_data(features: Features):
         response = responses[0]
 
         hourly = response.Hourly()
+
+        if len(hourly.Variables(0).ValuesAsNumpy()) == 0:
+            raise ValueError("No hourly data returned for the given parameters.")
+
         hourly_wind_speed_10m = hourly.Variables(0).ValuesAsNumpy()
         hourly_wind_direction_10m = hourly.Variables(1).ValuesAsNumpy()
         hourly_shortwave_radiation_instant = hourly.Variables(2).ValuesAsNumpy()
@@ -106,6 +110,10 @@ def get_features_data(features: Features):
 
         search_landsat = stac.search(bbox=bounds, datetime=time_window, collections=["landsat-c2-l2"], query={"eo:cloud_cover": {"lt": 20}, "platform": {"in": ["landsat-8"]}})
         signed_items_landsat = [planetary_computer.sign(item) for item in search_landsat.get_items()]
+
+        if len(signed_items_sentinel) == 0 or len(signed_items_landsat) == 0:
+            raise ValueError("No satellite imagery available for the given date and location.")
+
 
         resolution = 10
         scale = resolution / 111320.0

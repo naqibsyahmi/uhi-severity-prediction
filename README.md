@@ -50,7 +50,7 @@
 
     - **On Windows:**
     ```
-    venv\Scripts\activate
+    .\\.venv\Scripts\activate
     ```
 
     - **On macOS/Linux:**
@@ -82,4 +82,16 @@
 
     ```
     jupyter nbconvert --to notebook --execute uhi_severity.ipynb --inplace
+    ```
+
+3. Run the following command to run the backend server:
+
+    ```
+    uvicorn api:app --reload
+    ```
+
+4. Run the following command to run the frontend server:
+
+    ```
+    streamlit run app.py
     ```
