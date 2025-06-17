@@ -66,7 +66,6 @@ with col2:
 
 if st.button("🚀 Predict") and lat and lon:
     with st.spinner("Retrieving features and predicting..."):
-
         start_date, end_date = date_range
         get_features_payload = {
             "latitude": lat,

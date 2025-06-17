@@ -1,0 +1,36 @@
+FROM python:3.10-slim
+
+# Disable Python output buffering
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
+WORKDIR  /app
+
+# Install system dependencies for GDAL and other geospatial libraries
+RUN apt-get update && apt-get install -y \
+    gdal-bin \
+    libgdal-dev \
+    gcc \
+    python3-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set GDAL-related environment variables
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+ENV GDAL_VERSION=3.11.0
+
+# Copy all files into the container
+COPY . .
+
+# Copy .env into container
+COPY .env .env
+
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir --no-binary rasterio -r requirements.txt
+    
+# Run main.py when container starts
+CMD ["python", "main.py"]
+
+# docker build -f docker/DockerFile -t uhi-severity-prediction:latest .

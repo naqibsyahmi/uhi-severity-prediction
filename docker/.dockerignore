@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.sqlite
+.cache/
+.venv/
+venv/
+*.ipynb_checkpoints
+node_modules/
+.DS_Store
+*.log
+cache.sqlite
+sample
+data

@@ -1,6 +1,3 @@
-rioxarray
-rasterio
-stackstac
 pystac_client
 planetary_computer
 odc.stac
@@ -9,8 +6,6 @@ seaborn
 numpy
 pandas
 xarray
-rioxarray
-geopandas
 scikit-learn
 tqdm
 pydrive
@@ -18,9 +13,12 @@ openpyxl
 geopy
 plotly
 statsmodels
+streamlit
 nbformat
 xgboost
 shap
 geopy
 pydeck
 python-dotenv
+uvicorn[standard]
+fastapi

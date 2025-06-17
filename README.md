@@ -42,8 +42,15 @@
     ```
 
 2. Create a virtual environment named **`venv`** in your project folder by running the following command:
+
+    - **On Windows:**
     ```
     python -m venv venv
+    ```
+
+    - **On macOS/Linux:**
+    ```
+    python3 -m venv venv
     ```
 
 3. Activate the virtual environment based on your operating system:
@@ -78,20 +85,14 @@
     cd src
     ```
 
-2. Run the following command to run the project:
+2. Run the following command to execute the notebook that trains the prediction model and saves the model file:
 
     ```
     jupyter nbconvert --to notebook --execute uhi_severity.ipynb --inplace
     ```
 
-3. Run the following command to run the backend server:
+3. Run the following command to run the system:
 
     ```
-    uvicorn api:app --reload --app-dir ../backend
-    ```
-
-4. Run the following command to run the frontend server:
-
-    ```
-    streamlit run app.py
+    python main.py
     ```

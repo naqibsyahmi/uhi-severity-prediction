@@ -22,7 +22,7 @@ retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
 openmeteo = openmeteo_requests.Client(session=retry_session)
 
 model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "model", "uhi_prediction.pkl"))
-model = joblib.load(model_path)
+model, feature_names = joblib.load(model_path)
 
 class Features(BaseModel):
     latitude: float
