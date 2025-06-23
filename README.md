@@ -2,6 +2,24 @@
 
 ## 📝 Project Overview
 
+This project was originally developed as part of the **2025 EY Open Science AI & Data Challenge**, an annual global initiative that invites career professionals and students to harness data and AI to address urgent climate issues.
+
+The 2025 challenge focused on the **Urban Heat Island (UHI)** effect, a phenomenon where urban areas experience significantly higher temperatures than surrounding rural zones, posing serious health and environmental risks. Participants were tasked with building machine learning models to predict the severity of UHI hotspots using multisource geospatial and meterorological data. 
+
+Participants were provided with training datasets specific to **New York City**, including:
+
+- Urban near-surface air temperature data for selected boroughs (Manhattan and the Bronx).
+
+- Access to satellite-based Earth observation data via the Microsoft Planetary Computer API.
+
+This repository presents a **full-stack solution** that:
+
+- Predicts UHI severity using regression models trained on ground-based air temperature, satellite-derived imagery, and local weather data.
+
+- Offers an interactive web interface for users to select any urban location, choose a date range, and receive real-time UHI severity.
+
+- Aims to support urban planners, policymakers, and the public in identifying at-risk areas and driving informed decisions for urban sustainability.
+
 ### ❗️Problem Statement
 1. **Urban areas are getting hotter** compared to rural areas due to the **Urban Heat Island (UHI)**.​
 
@@ -22,6 +40,24 @@
 3. **To develop** accessible, open-source tools for city planners and policymakers to better understand and mitigate the effects of UHI.
 
 4. **To propose** sustainable urban planning strategies aimed at reducing UHI intensity, such as increasing green spaces and implementing heat-reflective building materials.
+
+
+### 🔍 Limitations
+1. **Limited geographic scope**: Data extraction focused only on Manhattan and the Bronx, reducing generalizability.
+
+2. **Inconsistent satellite coverage**: Some dates and cities lacked satellite imagery from the satellite data providers, limiting coverage.
+
+3. **Gaps in prediction coverage**: Unavailable satellite imagery during specific periods from providers limited prediction capability.
+
+4. **Temporal limitation**: Model evaluated using date ranges instead of daily granularity, affecting precision.
+
+
+### 🔮 Future Work
+1. **Geographic expansion**: Analyze more cities across diverse climates for broader insights.
+
+2. **Higher-resolution data**: User finer and more frequent satellite imagery to boost accuracy.
+
+3. **UI/UX improvements**: Enhance the tool's interface for better usability.
 
 ## 🚀 Getting Started
 
