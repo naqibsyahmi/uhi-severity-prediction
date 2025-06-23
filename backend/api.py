@@ -9,13 +9,19 @@ import joblib
 import numpy as np
 import openmeteo_requests
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas as pd
 import planetary_computer
 import pystac_client
 import requests_cache
 import xarray as xr
 
+from src.logger import setup_logger
+
 app = FastAPI()
+
+logger = setup_logger("backend", os.path.join(os.path.dirname(__file__), "..", "logs", "backend", "uhi_backend.log"))
 
 cache_session = requests_cache.CachedSession('.cache', expire_after=-1)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
@@ -25,11 +31,24 @@ model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "mode
 model, feature_names = joblib.load(model_path)
 
 class Features(BaseModel):
+    """
+    Request model for /get_features_data/ endpoint.
+
+    Attributes:
+        latitude (float): Latitude of the location.
+        longitude (float): Longitude of the location.
+        date_interval (str): Date interval in the format "YYYY-MM-DD/YYYY-MM-DD".
+    """
     latitude: float
     longitude: float
-    date_interval: str  # Format: "YYYY-MM-DD/YYYY-MM-DD"
+    date_interval: str 
 
 class UHIInput(BaseModel):
+    """
+    Request model for /predict_uhi_index/ endpoint.
+
+    Contains all input features needed by the model (meteorological and satellite-derived).
+    """
     Avg_Wind_Speed: float
     Wind_Direction: float
     Solar_Flux: float
@@ -59,7 +78,19 @@ class UHIInput(BaseModel):
     lwir11: float
 
 @app.post("/get_features_data/")
-def get_features_data(features: Features):
+def get_features_data(features: Features) -> JSONResponse:
+    """
+    Endpoint to retrieve averaged meteorological and satellite-derived features for a given location and date interval.
+
+    Parameters:
+        features (Features): Request body containing latitude, longitude, and date interval.
+
+    Returns:
+        JSON: A JSON response containing a dictionary of all computed features used for UHI index prediction.
+
+    Raises:
+        HTTPException: If there is an error in retrieving or processing the data.
+    """
     try:
         start_date, end_date = features.date_interval.split("/")
 
@@ -73,7 +104,6 @@ def get_features_data(features: Features):
         }
         responses = openmeteo.weather_api(url, params=params)
         response = responses[0]
-
         hourly = response.Hourly()
 
         if len(hourly.Variables(0).ValuesAsNumpy()) == 0:
@@ -178,16 +208,31 @@ def get_features_data(features: Features):
             **{band: float(np.nanmean(median_landsat[band].values)) for band in median_landsat.data_vars},
         }
 
+        logger.info("Feature data successfully retrieved and processed.")
         return JSONResponse(content=jsonable_encoder(response_json))
 
     except HTTPException as e:
-        raise HTTPException(status_code=400, detail=f"Bad request: {str(e)}")
+        logger.error(f"HTTPException {e.status_code}: {e.detail}")
+        raise
 
     except Exception as e:
+        logger.error(f"Unexpected error at /get_features_data/: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @app.post("/predict_uhi_index/")
-def predict_uhi_index(input: UHIInput):
+def predict_uhi_index(input: UHIInput) -> dict:
+    """
+    Endpoint to predict UHI severity index using provided features.
+
+    Parameters:
+        input (UHIInput): Request body containing all features required for UHI index prediction.
+
+    Returns:
+        dict: Predicted UHI index (float)
+
+    Raises:
+        HTTPException: If there is an error in the prediction process.
+    """
     try:
         input_array = np.array([
             input.Avg_Wind_Speed,
@@ -203,7 +248,9 @@ def predict_uhi_index(input: UHIInput):
         ]).reshape(1, -1)
 
         prediction = model.predict(input_array)
+        logger.info(f"Prediction successful: {prediction[0]}")
         return {"uhi_index": float(prediction[0])}
     
     except Exception as e:
+        logger.error(f"Prediction failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")

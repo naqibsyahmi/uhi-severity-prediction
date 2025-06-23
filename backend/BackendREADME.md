@@ -1,19 +1,81 @@
-cd ./backend/
+## 🎛️ Preliminaries
 
-pip install -r /path/to/requirements.txt
+1. Navigate to the backend directory:
 
-uvicorn.exe main:app --reload
+```
+cd backend
+```
 
-json request to get features data 
+2. Start the backend server:
 
+- **On Windows:**
+```
+uvicorn.exe api:app --reload
+```
+
+- **On macOS/Linux:**
+```
+uvicorn api:app --reload
+```
+
+By default, the app runs at http://127.0.0.1:8000
+
+# 🛰️ API Endpoints
+
+1. `/get_features_data/`
+
+**Method**: POST
+
+**Description**: Retrieves meteorological and satellite-derived features from **Open-Meteo** and **Planetary Computer APIs** for the specified location and date range.
+
+**Sample Request Body:**
+```
 {
   "latitude": 40.81310667,
   "longitude": -73.90916667,
   "date_interval": "2021-06-01/2021-09-01"
 }
+```
 
-json request to predict uhi index
+**Response:**
+```
+{
+  "Avg_Wind_Speed": ...,
+  "Wind_Direction": ...,
+  "Solar_Flux": ...,
+  "B01": ...,
+  "B02": ...,
+  "B03": ...,
+  "B04": ...,
+  "B05": ...,
+  "B06": ...,
+  "B07": ...,
+  "B08": ...,
+  "B8A": ...,
+  "B11": ...,
+  "B12": ...,
+  "NDVI_Sentinel": ...,
+  "NDBI_Sentinel": ...,
+  "NDVI_Landsat": ...,
+  "NDBI_Landsat": ...,
+  "red": ...,
+  "green": ...,
+  "blue": ...,
+  "nir08": ...,
+  "swir16": ...,
+  "swir22": ...,
+  "lwir11": ...,
+  }
+```
 
+2. `/predict_uhi_index/`
+
+**Method**: POST
+
+**Description**: Accepts a set of precomputed features and returns the predicted UHI severity index.
+
+**Sample Request Body:**
+```
 {
   "Avg_Wind_Speed": 11.016733169555664,
   "Wind_Direction": 204.09056091308594,
@@ -41,3 +103,11 @@ json request to predict uhi index
   "swir22": 0.11734549063134796,
   "lwir11": 36.6446444266813
 }
+```
+
+**Response:**
+```
+{
+  "uhi_index": ...
+}
+```
