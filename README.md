@@ -65,7 +65,6 @@ This repository presents a **full-stack solution** that:
 
 1. **Python 3.10+**: Please ensure that Python 3.10 or higher is installed on your system before running this project. You can download the required version from the official website [Install Python](https://www.python.org/downloads/).
 
-
 ### Setting Up the Environment
 
 1. Clone the repository by running the following command in your terminal:
@@ -112,13 +111,11 @@ This repository presents a **full-stack solution** that:
 ### Running the System
 
 1. Navigate to the **`src`** folder by running the following command in your terminal:
-
     ```
     cd src
     ```
 
 2. Run the following command to execute the notebook that trains the prediction model and saves the model file:
-
     ```
     jupyter nbconvert --to notebook --execute uhi_severity.ipynb --inplace
     ```
@@ -126,7 +123,6 @@ This repository presents a **full-stack solution** that:
 3. Once the model is created and and saved in the **`model`** directory, navigate to the project root
     
    If you're current in the `src/` directory, move back to the root:
-
    ```
    cd ..
    ```
@@ -134,7 +130,6 @@ This repository presents a **full-stack solution** that:
 4. Create a **`.env`** file in the root directory
 
    Add the following environment variables:
-
    ```
    # Backend
    INFERENCE_API_GET_FEATURES = "http://127.0.0.1:8000/get_features_data"
@@ -142,7 +137,6 @@ This repository presents a **full-stack solution** that:
    ```
 
 5. Once the .env is created, run the following command to run the system:
-
     ```
     python main.py
     ```
