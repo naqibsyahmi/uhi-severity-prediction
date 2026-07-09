@@ -1,6 +1,6 @@
-# 🏙️🔥 Urban Heat Island (UHI) Severity Prediction
+# 🏙️🔥 **Urban Heat Island (UHI) Severity Prediction**
 
-## 📝 Project Overview
+## 📝 **Project Overview**
 
 This project was originally developed as part of the **2025 EY Open Science AI & Data Challenge**, an annual global initiative that invites career professionals and students to harness data and AI to address urgent climate issues.
 
@@ -20,19 +20,12 @@ This repository presents a **full-stack solution** that:
 
 - Aims to support urban planners, policymakers, and the public in identifying at-risk areas and driving informed decisions for urban sustainability.
 
-### ❗️Problem Statement
-1. **Urban areas are getting hotter** compared to rural areas due to the **Urban Heat Island (UHI)**.​
+### ❗️ **Problem Statement**
 
-2. **High building density, lack of green spaces,** and **waste heat** from transportation and industries contribute to this matter. ​
+Urban areas are getting hotter** compared to rural areas due to the Urban Heat Island (UHI).​ High building density, lack of green spaces, and waste heat from transportation and industries contribute to this matter. Climate change and rapid urbanization are making the problem even worse.​ While current models often rely on satellite data to estimate urban temperatures, these models primarily measures land surface temperature (LST), which does not accurately reflect near-surface air temperature—the metric most relevant to human thermal exposure.​ There is a lack of public awareness** and accessible open-source tools for city planners to understand and address UHI.​
 
-3. **Climate change** and **rapid urbanization** are making the problem even worse.​
+### 🎯 **Project Objectives**
 
-4. While current models often **rely on satellite data** to estimate urban temperatures, these models primarily measures **land surface temperature (LST)**, which does not accurately reflect near-surface air temperature—the metric most relevant to human thermal exposure.​
-
-5. There is a **lack of public awareness** and **accessible open-source tools** for city planners to understand and address UHI.​
-
-
-### 🎯 Project Objectives
 1. **To identify** key environmental and structural factors (e.g., vegetation cover, surface temperature, building density) that influence UHI intensity in selected urban areas.
 
 2. **To evaluate** the effectiveness of current UHI modeling techniques, particularly those relying on satellite-derived surface temperature data, in accurately representing ground-level air temperatures.
@@ -42,7 +35,8 @@ This repository presents a **full-stack solution** that:
 4. **To propose** sustainable urban planning strategies aimed at reducing UHI intensity, such as increasing green spaces and implementing heat-reflective building materials.
 
 
-### 🔍 Limitations
+### 🔍 **Project Limitations**
+
 1. **Limited geographic scope**: Data extraction focused only on Manhattan and the Bronx, reducing generalizability.
 
 2. **Inconsistent satellite coverage**: Some dates and cities lacked satellite imagery from the satellite data providers, limiting coverage.
@@ -52,20 +46,21 @@ This repository presents a **full-stack solution** that:
 4. **Temporal limitation**: Model evaluated using date ranges instead of daily granularity, affecting precision.
 
 
-### 🔮 Future Work
+### 🔮 **Future Work**
+
 1. **Geographic expansion**: Analyze more cities across diverse climates for broader insights.
 
 2. **Higher-resolution data**: User finer and more frequent satellite imagery to boost accuracy.
 
 3. **UI/UX improvements**: Enhance the tool's interface for better usability.
 
-## 🚀 Getting Started
+## 🚀 **Getting Started**
 
-### Preliminaries
+### **Preliminaries**
 
-1. **Python 3.10+**: Please ensure that Python 3.10 or higher is installed on your system before running this project. You can download the required version from the official website [Install Python](https://www.python.org/downloads/).
+1. **Python 3.10++**: Please ensure that Python 3.10 or higher is installed on your system before running this project. You can download the required version from the official website [Install Python](https://www.python.org/downloads/).
 
-### Setting Up the Environment
+### **Setting Up the Environment**
 
 1. Clone the repository by running the following command in your terminal:
     ```
@@ -108,26 +103,28 @@ This repository presents a **full-stack solution** that:
     pip3 install -r requirements.txt
     ```
 
-### Running the System
+### **Running the Notebook and System**
 
 1. Navigate to the **`src`** folder by running the following command in your terminal:
+   
     ```
     cd src
     ```
 
-2. Run the following command to execute the notebook that trains the prediction model and saves the model file:
+3. Run the following command to execute the notebook that trains the prediction model and saves the model file:
+   
     ```
     jupyter nbconvert --to notebook --execute uhi_severity.ipynb --inplace
     ```
 
-3. Once the model is created and and saved in the **`model`** directory, navigate to the project root
+5. Once the model is created and and saved in the **`model`** directory, navigate to the project root
     
    If you're current in the `src/` directory, move back to the root:
    ```
    cd ..
    ```
 
-4. Create a **`.env`** file in the root directory
+6. Create a **`.env`** file in the root directory
 
    Add the following environment variables:
    ```
@@ -136,7 +133,7 @@ This repository presents a **full-stack solution** that:
    INFERENCE_API_PREDICTION = "http://127.0.0.1:8000/predict_uhi_index"  
    ```
 
-5. Once the .env is created, run the following command to run the system:
+7. Once the .env is created, run the following command to run the system:
     ```
     python main.py
     ```
